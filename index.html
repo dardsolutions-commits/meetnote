@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MeetNote</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242837;
+  --border: #2e3347;
+  --text: #e8eaf0;
+  --text2: #8b90a5;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --red: #ef4444;
+  --red2: #f87171;
+  --green: #22c55e;
+  --green2: #4ade80;
+  --orange: #f59e0b;
+  --radius: 12px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+.app { max-width: 900px; margin: 0 auto; padding: 16px; }
+
+/* Auth screen */
+.auth-screen {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100dvh; padding: 20px;
+}
+.auth-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 40px; width: 100%; max-width: 400px; text-align: center;
+}
+.auth-card .logo { justify-content: center; margin-bottom: 24px; }
+.auth-card .logo svg { width: 48px; height: 48px; }
+.auth-card .logo h1 { font-size: 28px; }
+.auth-subtitle { color: var(--text2); font-size: 14px; margin-bottom: 28px; line-height: 1.5; }
+.auth-input {
+  width: 100%; padding: 14px 16px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-size: 15px; outline: none; margin-bottom: 12px;
+}
+.auth-input:focus { border-color: var(--accent); }
+.auth-input::placeholder { color: var(--text2); }
+.auth-btn {
+  width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none;
+  border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s;
+}
+.auth-btn:hover { background: var(--accent2); }
+.auth-btn:disabled { opacity: .5; cursor: not-allowed; }
+.auth-msg {
+  margin-top: 16px; font-size: 13px; color: var(--text2); min-height: 20px;
+}
+.auth-msg.success { color: var(--green2); }
+.auth-msg.error { color: var(--red2); }
+.auth-divider {
+  display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--text2); font-size: 12px;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.auth-skip {
+  background: none; border: 1px solid var(--border); color: var(--text2); width: 100%;
+  padding: 12px; border-radius: 10px; font-size: 14px; cursor: pointer; transition: all .2s;
+}
+.auth-skip:hover { border-color: var(--accent); color: var(--text); }
+
+/* User pill in header */
+.user-pill {
+  display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 8px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 20px;
+  font-size: 12px; color: var(--text2);
+}
+.user-pill .avatar {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--accent);
+  display: flex; align-items: center; justify-content: center; font-size: 11px;
+  font-weight: 700; color: #fff;
+}
+.user-pill button {
+  background: none; border: none; color: var(--text2); cursor: pointer; font-size: 12px;
+  padding: 2px 4px; border-radius: 4px; margin-left: 4px;
+}
+.user-pill button:hover { color: var(--red2); }
+
+/* Header */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; margin-bottom: 20px; border-bottom: 1px solid var(--border);
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo svg { width: 32px; height: 32px; }
+.logo h1 { font-size: 22px; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* Language toggle */
+.lang-toggle {
+  display: flex; background: var(--surface); border-radius: 8px; overflow: hidden; border: 1px solid var(--border);
+}
+.lang-btn {
+  padding: 6px 14px; border: none; background: none; color: var(--text2); cursor: pointer;
+  font-size: 13px; font-weight: 600; transition: all .2s;
+}
+.lang-btn.active { background: var(--accent); color: #fff; }
+
+/* Tabs */
+.tabs {
+  display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 4px;
+  margin-bottom: 20px; border: 1px solid var(--border);
+}
+.tab {
+  flex: 1; padding: 10px; border: none; background: none; color: var(--text2);
+  cursor: pointer; border-radius: 8px; font-size: 14px; font-weight: 600; transition: all .2s;
+}
+.tab.active { background: var(--accent); color: #fff; }
+.tab:hover:not(.active) { background: var(--surface2); color: var(--text); }
+
+/* Record panel */
+.record-panel {
+  background: var(--surface); border-radius: var(--radius); padding: 32px;
+  border: 1px solid var(--border); text-align: center; margin-bottom: 20px;
+}
+.record-btn {
+  width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--red);
+  background: transparent; cursor: pointer; display: inline-flex; align-items: center;
+  justify-content: center; transition: all .3s; position: relative;
+}
+.record-btn::after {
+  content: ''; width: 36px; height: 36px; background: var(--red); border-radius: 50%;
+  transition: all .3s;
+}
+.record-btn.recording { border-color: var(--red2); animation: pulse 1.5s infinite; }
+.record-btn.recording::after { border-radius: 6px; width: 28px; height: 28px; background: var(--red2); }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); }
+  50% { box-shadow: 0 0 0 16px rgba(239,68,68,0); }
+}
+.record-status { margin-top: 16px; font-size: 14px; color: var(--text2); }
+.record-timer { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 8px; color: var(--text); }
+.record-lang { margin-top: 8px; font-size: 12px; color: var(--accent2); }
+
+/* Live transcript */
+.live-transcript {
+  background: var(--surface2); border-radius: 8px; padding: 16px; margin-top: 20px;
+  max-height: 200px; overflow-y: auto; text-align: left; font-size: 14px; line-height: 1.6;
+  color: var(--text); display: none; border: 1px solid var(--border);
+}
+.live-transcript.visible { display: block; }
+.interim { color: var(--text2); font-style: italic; }
+
+/* Meeting title input */
+.title-input {
+  width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 15px; margin-top: 16px; outline: none;
+}
+.title-input:focus { border-color: var(--accent); }
+.title-input::placeholder { color: var(--text2); }
+
+/* Meeting cards */
+.meetings-list { display: flex; flex-direction: column; gap: 12px; }
+.meeting-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px; cursor: pointer; transition: all .2s;
+}
+.meeting-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.meeting-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.meeting-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text2); flex-wrap: wrap; }
+.meeting-meta span { display: flex; align-items: center; gap: 4px; }
+.meeting-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px;
+  font-weight: 600; margin-left: 8px;
+}
+.badge-summary { background: rgba(99,102,241,.15); color: var(--accent2); }
+.badge-actions { background: rgba(34,197,94,.15); color: var(--green2); }
+
+/* Meeting detail view */
+.meeting-detail { display: none; }
+.meeting-detail.visible { display: block; }
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text2); cursor: pointer;
+  font-size: 13px; margin-bottom: 16px; transition: all .2s;
+}
+.back-btn:hover { border-color: var(--accent); color: var(--text); }
+
+.detail-header { margin-bottom: 20px; }
+.detail-header h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+.section {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px; margin-bottom: 16px;
+}
+.section h4 {
+  font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--text2);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.section h4 svg { width: 16px; height: 16px; }
+.section p, .section li { font-size: 14px; line-height: 1.7; color: var(--text); }
+.section ul { padding-left: 20px; }
+.section li { margin-bottom: 6px; }
+.action-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; }
+.action-check {
+  width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 4px;
+  cursor: pointer; flex-shrink: 0; margin-top: 2px; transition: all .2s;
+}
+.action-check.checked { background: var(--green); border-color: var(--green); }
+.action-text.done { text-decoration: line-through; color: var(--text2); }
+
+/* Notes editor */
+.notes-editor {
+  width: 100%; min-height: 120px; padding: 12px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  font-size: 14px; line-height: 1.6; resize: vertical; outline: none; font-family: inherit;
+}
+.notes-editor:focus { border-color: var(--accent); }
+
+/* Buttons */
+.btn {
+  padding: 8px 18px; border: none; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 600; transition: all .2s; display: inline-flex;
+  align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--accent); }
+.btn-danger { background: rgba(239,68,68,.15); color: var(--red2); }
+.btn-danger:hover { background: rgba(239,68,68,.25); }
+.btn-small { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* AI loading */
+.ai-loading {
+  display: flex; align-items: center; gap: 10px; padding: 16px;
+  background: rgba(99,102,241,.08); border-radius: 8px; margin-top: 12px;
+}
+.ai-spinner {
+  width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Search */
+.search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+.search-input {
+  flex: 1; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 14px; outline: none;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text2); }
+
+/* Settings panel */
+.settings-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px;
+}
+.setting-row {
+  display: flex; justify-content: space-between; align-items: center; padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-label h4 { font-size: 14px; margin-bottom: 2px; }
+.setting-label p { font-size: 12px; color: var(--text2); }
+.setting-input {
+  padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: 13px; width: 260px; outline: none;
+}
+.setting-input:focus { border-color: var(--accent); }
+
+/* Sync status */
+.sync-bar {
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+  background: rgba(99,102,241,.06); border: 1px solid var(--border); border-radius: 8px;
+  margin-bottom: 16px; font-size: 12px; color: var(--text2);
+}
+.sync-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.sync-dot.online { background: var(--green); }
+.sync-dot.offline { background: var(--text2); }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  padding: 12px 24px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-size: 14px; z-index: 100;
+  opacity: 0; transition: opacity .3s; pointer-events: none;
+}
+.toast.visible { opacity: 1; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text2); }
+.empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: .4; }
+.empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty-state p { font-size: 14px; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .app { padding: 12px; }
+  .record-panel { padding: 24px 16px; }
+  .record-btn { width: 64px; height: 64px; }
+  .record-btn::after { width: 28px; height: 28px; }
+  .record-timer { font-size: 26px; }
+  .detail-actions { flex-direction: column; }
+  .search-bar { flex-direction: column; }
+  .setting-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .setting-input { width: 100%; }
+  .header-actions { gap: 4px; }
+  .auth-card { padding: 28px 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Auth Screen -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="logo">
+      <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#6366f1"/><path d="M10 20V12a6 6 0 0112 0v8" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M8 18v2a8 8 0 0016 0v-2" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="26" x2="16" y2="30" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="30" x2="20" y2="30" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      <h1>MeetNote</h1>
+    </div>
+    <p class="auth-subtitle">Record, transcribe, and summarize your meetings with AI. Sign in to sync across all your devices.</p>
+    <input class="auth-input" id="authEmail" type="email" placeholder="Enter your email" onkeydown="if(event.key==='Enter')sendMagicLink()" />
+    <button class="auth-btn" id="authBtn" onclick="sendMagicLink()">Send Magic Link</button>
+    <div class="auth-msg" id="authMsg"></div>
+    <div class="auth-divider">or</div>
+    <button class="auth-skip" onclick="skipAuth()">Continue without account</button>
+  </div>
+</div>
+
+<!-- Main App (hidden until auth) -->
+<div class="app" id="mainApp" style="display:none">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#6366f1"/><path d="M10 20V12a6 6 0 0112 0v8" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M8 18v2a8 8 0 0016 0v-2" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="26" x2="16" y2="30" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="30" x2="20" y2="30" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      <h1>MeetNote</h1>
+    </div>
+    <div class="header-actions">
+      <div class="lang-toggle">
+        <button class="lang-btn active" data-lang="en-US" onclick="setLang('en-US')">EN</button>
+        <button class="lang-btn" data-lang="es-ES" onclick="setLang('es-ES')">ES</button>
+      </div>
+      <div class="user-pill" id="userPill" style="display:none">
+        <div class="avatar" id="userAvatar"></div>
+        <span id="userEmail"></span>
+        <button onclick="signOut()" title="Sign out">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sync status bar -->
+  <div class="sync-bar" id="syncBar" style="display:none">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncStatus"></span>
+    <button class="btn btn-small btn-secondary" onclick="manualSync()" style="margin-left:auto">Sync now</button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="record" onclick="switchTab('record')">
+      <svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="5"/></svg>
+      Record
+    </button>
+    <button class="tab" data-tab="meetings" onclick="switchTab('meetings')">
+      <svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="2" y1="6" x2="14" y2="6"/><line x1="6" y1="2" x2="6" y2="6"/></svg>
+      Meetings
+    </button>
+    <button class="tab" data-tab="settings" onclick="switchTab('settings')">
+      <svg style="width:14px;height:14px;vertical-align:-2px;margin-right:4px" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1v2m0 10v2m-7-7h2m10 0h2m-2.5-4.5-1.4 1.4m-7.2 7.2-1.4 1.4m0-10.1 1.4 1.4m7.2 7.2 1.4 1.4"/></svg>
+      Settings
+    </button>
+  </div>
+
+  <!-- Record Tab -->
+  <div id="tab-record">
+    <div class="record-panel">
+      <button class="record-btn" id="recordBtn" onclick="toggleRecording()"></button>
+      <div class="record-status" id="recordStatus">Tap to start recording</div>
+      <div class="record-timer" id="recordTimer">00:00</div>
+      <div class="record-lang" id="recordLang">Language: English</div>
+      <input class="title-input" id="meetingTitle" placeholder="Meeting title (optional)" />
+      <div class="live-transcript" id="liveTranscript"></div>
+    </div>
+  </div>
+
+  <!-- Meetings Tab -->
+  <div id="tab-meetings" style="display:none">
+    <div class="search-bar">
+      <input class="search-input" id="searchInput" placeholder="Search meetings..." oninput="renderMeetings()" />
+    </div>
+    <div class="meetings-list" id="meetingsList"></div>
+  </div>
+
+  <!-- Meeting Detail -->
+  <div class="meeting-detail" id="meetingDetail">
+    <button class="back-btn" onclick="closeMeetingDetail()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2L4 8l6 6"/></svg>
+      Back
+    </button>
+    <div class="detail-header">
+      <h2 id="detailTitle"></h2>
+      <div class="meeting-meta" id="detailMeta"></div>
+      <div class="detail-actions" id="detailActions"></div>
+    </div>
+    <div id="detailContent"></div>
+  </div>
+
+  <!-- Settings Tab -->
+  <div id="tab-settings" style="display:none">
+    <div class="settings-panel">
+      <div class="setting-row">
+        <div class="setting-label">
+          <h4>API Proxy URL</h4>
+          <p>Backend proxy for Claude API calls</p>
+        </div>
+        <input class="setting-input" id="apiUrl" placeholder="https://wkdmsrxrtxwgifiloftg.supabase.co/functions/v1/summarize" />
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">
+          <h4>Default Language</h4>
+          <p>Speech recognition language</p>
+        </div>
+        <select class="setting-input" id="defaultLang">
+          <option value="en-US">English</option>
+          <option value="es-ES">Spanish</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">
+          <h4>Auto-summarize</h4>
+          <p>Automatically summarize when recording stops</p>
+        </div>
+        <select class="setting-input" id="autoSummarize">
+          <option value="off">Off</option>
+          <option value="on">On</option>
+        </select>
+      </div>
+      <div class="setting-row" id="accountRow" style="display:none">
+        <div class="setting-label">
+          <h4>Account</h4>
+          <p id="accountEmail"></p>
+        </div>
+        <button class="btn btn-danger btn-small" onclick="signOut()">Sign Out</button>
+      </div>
+      <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+        <button class="btn btn-secondary" onclick="exportAllData()">Export All Data</button>
+        <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ──
+const SUPABASE_URL = 'https://wkdmsrxrtxwgifiloftg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrZG1zcnhydHh3Z2lmaWxvZnRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzODcxNTUsImV4cCI6MjA5ODk2MzE1NX0.b0FEWrd3bL-LYLSBY17eFCylkMymtJ1-aPEC6F1pcJU';
+const DB_KEY = 'meetnote_meetings';
+const SETTINGS_KEY = 'meetnote_settings';
+
+let meetings = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+let recognition = null;
+let isRecording = false;
+let recordStart = null;
+let timerInterval = null;
+let currentTranscript = '';
+let interimText = '';
+let currentLang = settings.defaultLang || 'en-US';
+let currentMeetingId = null;
+let authSession = null;
+
+// ── Supabase Auth helpers ──
+function sbHeaders(accessToken) {
+  const h = {
+    'apikey': SUPABASE_KEY,
+    'Content-Type': 'application/json',
+  };
+  if (accessToken) h['Authorization'] = `Bearer ${accessToken}`;
+  else h['Authorization'] = `Bearer ${SUPABASE_KEY}`;
+  return h;
+}
+
+async function sendMagicLink() {
+  const email = document.getElementById('authEmail').value.trim();
+  if (!email) { showAuthMsg('Enter your email', 'error'); return; }
+
+  const btn = document.getElementById('authBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  try {
+    const siteUrl = window.location.href.split('?')[0].split('#')[0];
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/magiclink`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, options: { emailRedirectTo: siteUrl } })
+    });
+
+    if (res.ok) {
+      showAuthMsg('Check your email for the magic link!', 'success');
+    } else {
+      const err = await res.json();
+      showAuthMsg(err.msg || err.error_description || 'Failed to send link', 'error');
+    }
+  } catch (e) {
+    showAuthMsg('Network error. Try again.', 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Send Magic Link';
+}
+
+function showAuthMsg(msg, type) {
+  const el = document.getElementById('authMsg');
+  el.textContent = msg;
+  el.className = 'auth-msg ' + (type || '');
+}
+
+function skipAuth() {
+  authSession = null;
+  enterApp();
+}
+
+async function signOut() {
+  if (authSession?.access_token) {
+    await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+      method: 'POST',
+      headers: sbHeaders(authSession.access_token)
+    }).catch(() => {});
+  }
+  authSession = null;
+  localStorage.removeItem('meetnote_session');
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('userPill').style.display = 'none';
+  document.getElementById('syncBar').style.display = 'none';
+  document.getElementById('accountRow').style.display = 'none';
+  toast('Signed out');
+}
+
+async function refreshSession() {
+  if (!authSession?.refresh_token) return false;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: authSession.refresh_token })
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    authSession = data;
+    localStorage.setItem('meetnote_session', JSON.stringify(data));
+    return true;
+  } catch { return false; }
+}
+
+function parseHashSession() {
+  const hash = window.location.hash.substring(1);
+  if (!hash) return null;
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+  if (!accessToken) return null;
+  window.history.replaceState(null, '', window.location.pathname);
+  return { access_token: accessToken, refresh_token: refreshToken };
+}
+
+async function getUser(accessToken) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+function enterApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+
+  if (authSession) {
+    const email = authSession.user?.email || '';
+    document.getElementById('userPill').style.display = 'flex';
+    document.getElementById('userAvatar').textContent = (email[0] || '?').toUpperCase();
+    document.getElementById('userEmail').textContent = email;
+    document.getElementById('accountRow').style.display = 'flex';
+    document.getElementById('accountEmail').textContent = email;
+    updateSyncBar(true);
+  } else {
+    updateSyncBar(false);
+  }
+
+  initApp();
+}
+
+function updateSyncBar(loggedIn) {
+  const bar = document.getElementById('syncBar');
+  const dot = document.getElementById('syncDot');
+  const status = document.getElementById('syncStatus');
+  bar.style.display = 'flex';
+  if (loggedIn) {
+    dot.className = 'sync-dot online';
+    status.textContent = 'Connected — meetings sync to cloud';
+  } else {
+    dot.className = 'sync-dot offline';
+    status.textContent = 'Offline mode — sign in to sync';
+  }
+}
+
+// ── Init ──
+function initApp() {
+  document.getElementById('apiUrl').value = settings.apiUrl || '';
+  document.getElementById('defaultLang').value = currentLang;
+  document.getElementById('autoSummarize').value = settings.autoSummarize || 'off';
+  setLang(currentLang);
+  renderMeetings();
+  if (authSession) {
+    pullFromSupabase();
+    syncToSupabase();
+  }
+}
+
+// ── Tabs ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  ['record', 'meetings', 'settings'].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t === tab ? 'block' : 'none';
+  });
+  document.getElementById('meetingDetail').classList.remove('visible');
+  document.getElementById('meetingDetail').style.display = 'none';
+  if (tab === 'meetings') renderMeetings();
+}
+
+// ── Language ──
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  document.getElementById('recordLang').textContent =
+    `Language: ${lang === 'en-US' ? 'English' : 'Spanish'}`;
+  if (recognition && isRecording) {
+    recognition.lang = lang;
+    recognition.stop();
+    setTimeout(() => recognition.start(), 300);
+  }
+}
+
+// ── Recording ──
+function toggleRecording() {
+  if (isRecording) stopRecording();
+  else startRecording();
+}
+
+function startRecording() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    toast('Speech recognition not supported. Use Chrome.');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = currentLang;
+  recognition.maxAlternatives = 1;
+
+  currentTranscript = '';
+  interimText = '';
+  const el = document.getElementById('liveTranscript');
+  el.classList.add('visible');
+  el.innerHTML = '<span class="interim">Listening...</span>';
+
+  recognition.onresult = (e) => {
+    let final = '', interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t + ' ';
+      else interim = t;
+    }
+    if (final) currentTranscript += final;
+    interimText = interim;
+    el.innerHTML = currentTranscript +
+      (interimText ? `<span class="interim">${interimText}</span>` : '');
+    el.scrollTop = el.scrollHeight;
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech') return;
+    console.error('Speech error:', e.error);
+  };
+
+  recognition.onend = () => {
+    if (isRecording) { try { recognition.start(); } catch(e) {} }
+  };
+
+  recognition.start();
+  isRecording = true;
+  recordStart = Date.now();
+  document.getElementById('recordBtn').classList.add('recording');
+  document.getElementById('recordStatus').textContent = 'Recording...';
+  timerInterval = setInterval(updateTimer, 1000);
+}
+
+function stopRecording() {
+  if (recognition) { recognition.onend = null; recognition.stop(); }
+  isRecording = false;
+  clearInterval(timerInterval);
+  document.getElementById('recordBtn').classList.remove('recording');
+  document.getElementById('recordStatus').textContent = 'Tap to start recording';
+
+  if (!currentTranscript.trim()) {
+    toast('No speech detected');
+    document.getElementById('liveTranscript').classList.remove('visible');
+    document.getElementById('recordTimer').textContent = '00:00';
+    return;
+  }
+
+  const duration = Math.floor((Date.now() - recordStart) / 1000);
+  const title = document.getElementById('meetingTitle').value.trim() ||
+    `Meeting ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+
+  const meeting = {
+    id: crypto.randomUUID(),
+    title,
+    date: new Date().toISOString(),
+    duration,
+    lang: currentLang,
+    transcript: currentTranscript.trim(),
+    summary: null,
+    actionItems: null,
+    notes: '',
+    synced: false
+  };
+
+  meetings.unshift(meeting);
+  saveMeetings();
+  document.getElementById('meetingTitle').value = '';
+  document.getElementById('recordTimer').textContent = '00:00';
+  document.getElementById('liveTranscript').classList.remove('visible');
+  toast('Meeting saved');
+
+  if (authSession) syncToSupabase();
+  if (settings.autoSummarize === 'on') summarizeMeeting(meeting.id);
+}
+
+function updateTimer() {
+  const s = Math.floor((Date.now() - recordStart) / 1000);
+  const m = Math.floor(s / 60).toString().padStart(2, '0');
+  const sec = (s % 60).toString().padStart(2, '0');
+  document.getElementById('recordTimer').textContent = `${m}:${sec}`;
+}
+
+// ── Storage ──
+function saveMeetings() {
+  localStorage.setItem(DB_KEY, JSON.stringify(meetings));
+}
+
+// ── Meetings list ──
+function renderMeetings() {
+  const query = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  const filtered = meetings.filter(m =>
+    m.title.toLowerCase().includes(query) ||
+    m.transcript.toLowerCase().includes(query) ||
+    (m.summary && m.summary.toLowerCase().includes(query))
+  );
+  const list = document.getElementById('meetingsList');
+
+  if (!filtered.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="48" height="48" rx="8"/><line x1="20" y1="24" x2="44" y2="24"/><line x1="20" y1="32" x2="38" y2="32"/><line x1="20" y1="40" x2="32" y2="40"/></svg>
+        <h3>${query ? 'No matches' : 'No meetings yet'}</h3>
+        <p>${query ? 'Try a different search' : 'Record your first meeting to get started'}</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(m => {
+    const d = new Date(m.date);
+    const dur = formatDuration(m.duration);
+    const badges = [
+      m.summary ? '<span class="meeting-badge badge-summary">Summary</span>' : '',
+      m.actionItems?.length ? `<span class="meeting-badge badge-actions">${m.actionItems.length} actions</span>` : ''
+    ].join('');
+    return `
+      <div class="meeting-card" onclick="openMeeting('${m.id}')">
+        <h3>${esc(m.title)}${badges}</h3>
+        <div class="meeting-meta">
+          <span>${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+          <span>${dur}</span>
+          <span>${m.lang === 'es-ES' ? 'ES' : 'EN'}</span>
+          ${m.synced ? '<span style="color:var(--green)">✓ Synced</span>' : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Meeting detail ──
+function openMeeting(id) {
+  const m = meetings.find(x => x.id === id);
+  if (!m) return;
+  currentMeetingId = id;
+
+  document.getElementById('tab-meetings').style.display = 'none';
+  const detail = document.getElementById('meetingDetail');
+  detail.style.display = 'block';
+  detail.classList.add('visible');
+
+  document.getElementById('detailTitle').textContent = m.title;
+  document.getElementById('detailMeta').innerHTML = `
+    <span>${new Date(m.date).toLocaleDateString()} ${new Date(m.date).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+    <span>${formatDuration(m.duration)}</span>
+    <span>${m.lang === 'es-ES' ? 'Spanish' : 'English'}</span>`;
+
+  document.getElementById('detailActions').innerHTML = `
+    <button class="btn btn-primary btn-small" onclick="summarizeMeeting('${m.id}')" ${m.summary ? 'disabled' : ''}>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8l2 4-6 8-6-8z"/></svg>
+      ${m.summary ? 'Summarized' : 'Summarize with AI'}
+    </button>
+    <button class="btn btn-secondary btn-small" onclick="exportMeeting('${m.id}')">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12h8M8 2v8m-3-3l3 3 3-3"/></svg>
+      Export
+    </button>
+    <button class="btn btn-danger btn-small" onclick="deleteMeeting('${m.id}')">Delete</button>`;
+
+  let html = '';
+  if (m.summary) {
+    html += `<div class="section"><h4>
+      <svg viewBox="0 0 16 16" fill="none" stroke="var(--accent2)" stroke-width="1.5"><path d="M4 2h8l2 4-6 8-6-8z"/></svg>
+      AI Summary</h4><p>${esc(m.summary)}</p></div>`;
+  }
+  if (m.actionItems?.length) {
+    html += `<div class="section"><h4>
+      <svg viewBox="0 0 16 16" fill="none" stroke="var(--green)" stroke-width="1.5"><path d="M4 4h8M4 8h8M4 12h5"/><path d="M13 10l-3 3-1.5-1.5"/></svg>
+      Action Items</h4>`;
+    m.actionItems.forEach((item, i) => {
+      html += `<div class="action-item">
+        <div class="action-check ${item.done ? 'checked' : ''}" onclick="toggleAction('${m.id}',${i})"></div>
+        <span class="action-text ${item.done ? 'done' : ''}">${esc(item.text)}</span>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  html += `<div class="section"><h4>
+    <svg viewBox="0 0 16 16" fill="none" stroke="var(--text2)" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="9" y2="9"/></svg>
+    Transcript</h4><p>${esc(m.transcript)}</p></div>`;
+  html += `<div class="section"><h4>
+    <svg viewBox="0 0 16 16" fill="none" stroke="var(--orange)" stroke-width="1.5"><path d="M8 2L2 14h12z"/></svg>
+    Notes</h4>
+    <textarea class="notes-editor" oninput="saveNotes('${m.id}', this.value)" placeholder="Add your notes...">${esc(m.notes || '')}</textarea>
+  </div>`;
+
+  document.getElementById('detailContent').innerHTML = html;
+}
+
+function closeMeetingDetail() {
+  document.getElementById('meetingDetail').style.display = 'none';
+  document.getElementById('meetingDetail').classList.remove('visible');
+  document.getElementById('tab-meetings').style.display = 'block';
+  currentMeetingId = null;
+  renderMeetings();
+}
+
+// ── AI Summarize ──
+async function summarizeMeeting(id) {
+  const m = meetings.find(x => x.id === id);
+  if (!m) return;
+
+  const apiUrl = settings.apiUrl || document.getElementById('apiUrl')?.value || 'https://wkdmsrxrtxwgifiloftg.supabase.co/functions/v1/summarize';
+  if (!apiUrl) {
+    toast('Set API proxy URL in Settings first');
+    switchTab('settings');
+    return;
+  }
+
+  const contentEl = document.getElementById('detailContent');
+  if (contentEl) {
+    const loader = document.createElement('div');
+    loader.className = 'ai-loading';
+    loader.id = 'aiLoader';
+    loader.innerHTML = '<div class="ai-spinner"></div><span>Analyzing meeting with AI...</span>';
+    contentEl.prepend(loader);
+  }
+
+  const langHint = m.lang === 'es-ES' ? 'The transcript is in Spanish. Respond in Spanish.' : '';
+
+  try {
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        messages: [{
+          role: 'user',
+          content: `Analyze this meeting transcript and provide:
+1. A concise summary (2-4 sentences)
+2. A list of action items (if any)
+
+${langHint}
+
+Format your response exactly like this:
+SUMMARY:
+[your summary here]
+
+ACTION ITEMS:
+- [action item 1]
+- [action item 2]
+
+If there are no action items, write "None".
+
+Transcript:
+${m.transcript}`
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text || data.choices?.[0]?.message?.content || '';
+    const summaryMatch = text.match(/SUMMARY:\s*([\s\S]*?)(?=ACTION ITEMS:|$)/i);
+    const actionsMatch = text.match(/ACTION ITEMS:\s*([\s\S]*)/i);
+
+    m.summary = summaryMatch ? summaryMatch[1].trim() : text.trim();
+    if (actionsMatch) {
+      const items = actionsMatch[1].trim().split('\n')
+        .map(l => l.replace(/^[-*•]\s*/, '').trim())
+        .filter(l => l && l.toLowerCase() !== 'none');
+      m.actionItems = items.map(t => ({ text: t, done: false }));
+    }
+
+    m.synced = false;
+    saveMeetings();
+    openMeeting(id);
+    toast('Summary generated');
+    if (authSession) syncToSupabase();
+  } catch (err) {
+    console.error('AI error:', err);
+    toast('Failed to summarize. Check your API proxy.');
+  }
+  document.getElementById('aiLoader')?.remove();
+}
+
+// ── Actions ──
+function toggleAction(meetingId, idx) {
+  const m = meetings.find(x => x.id === meetingId);
+  if (m?.actionItems?.[idx] !== undefined) {
+    m.actionItems[idx].done = !m.actionItems[idx].done;
+    m.synced = false;
+    saveMeetings();
+    openMeeting(meetingId);
+  }
+}
+
+function saveNotes(meetingId, text) {
+  const m = meetings.find(x => x.id === meetingId);
+  if (m) { m.notes = text; m.synced = false; saveMeetings(); }
+}
+
+// ── Export ──
+function exportMeeting(id) {
+  const m = meetings.find(x => x.id === id);
+  if (!m) return;
+  const d = new Date(m.date);
+  let md = `# ${m.title}\n\n`;
+  md += `**Date:** ${d.toLocaleDateString()} ${d.toLocaleTimeString()}\n`;
+  md += `**Duration:** ${formatDuration(m.duration)}\n`;
+  md += `**Language:** ${m.lang === 'es-ES' ? 'Spanish' : 'English'}\n\n`;
+  if (m.summary) md += `## Summary\n\n${m.summary}\n\n`;
+  if (m.actionItems?.length) {
+    md += `## Action Items\n\n`;
+    m.actionItems.forEach(a => { md += `- [${a.done ? 'x' : ' '}] ${a.text}\n`; });
+    md += '\n';
+  }
+  md += `## Transcript\n\n${m.transcript}\n`;
+  if (m.notes) md += `\n## Notes\n\n${m.notes}\n`;
+
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${m.title.replace(/[^a-z0-9]/gi, '_')}.md`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Exported as Markdown');
+}
+
+function exportAllData() {
+  const blob = new Blob([JSON.stringify(meetings, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `meetnote_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Data exported');
+}
+
+function deleteMeeting(id) {
+  if (!confirm('Delete this meeting?')) return;
+  if (authSession) deleteFromSupabase(id);
+  meetings = meetings.filter(m => m.id !== id);
+  saveMeetings();
+  closeMeetingDetail();
+  toast('Meeting deleted');
+}
+
+function clearAllData() {
+  if (!confirm('Delete ALL meetings? This cannot be undone.')) return;
+  meetings = [];
+  saveMeetings();
+  renderMeetings();
+  toast('All data cleared');
+}
+
+// ── Settings ──
+function saveSettings() {
+  settings = {
+    apiUrl: document.getElementById('apiUrl').value.trim(),
+    defaultLang: document.getElementById('defaultLang').value,
+    autoSummarize: document.getElementById('autoSummarize').value
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  toast('Settings saved');
+}
+
+// ── Supabase Sync (authenticated) ──
+async function syncToSupabase() {
+  if (!authSession?.access_token) return;
+
+  const unsynced = meetings.filter(m => !m.synced);
+  if (!unsynced.length) return;
+
+  const headers = {
+    ...sbHeaders(authSession.access_token),
+    'Prefer': 'resolution=merge-duplicates'
+  };
+
+  try {
+    const rows = unsynced.map(m => ({
+      id: m.id,
+      user_id: authSession.user?.id,
+      title: m.title,
+      date: m.date,
+      duration: m.duration,
+      lang: m.lang,
+      transcript: m.transcript,
+      summary: m.summary,
+      action_items: m.actionItems || null,
+      notes: m.notes
+    }));
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/meetings`, {
+      method: 'POST', headers, body: JSON.stringify(rows)
+    });
+
+    if (res.status === 401) {
+      if (await refreshSession()) return syncToSupabase();
+      return;
+    }
+
+    if (res.ok) {
+      unsynced.forEach(m => m.synced = true);
+      saveMeetings();
+      renderMeetings();
+    }
+  } catch (e) { console.error('Sync error:', e); }
+}
+
+async function pullFromSupabase() {
+  if (!authSession?.access_token) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/meetings?order=date.desc`, {
+      headers: sbHeaders(authSession.access_token)
+    });
+
+    if (res.status === 401) {
+      if (await refreshSession()) return pullFromSupabase();
+      return;
+    }
+    if (!res.ok) return;
+
+    const remote = await res.json();
+    const localIds = new Set(meetings.map(m => m.id));
+    let added = 0;
+    remote.forEach(r => {
+      if (!localIds.has(r.id)) {
+        meetings.push({
+          id: r.id, title: r.title, date: r.date, duration: r.duration,
+          lang: r.lang, transcript: r.transcript, summary: r.summary,
+          actionItems: r.action_items || null,
+          notes: r.notes || '', synced: true
+        });
+        added++;
+      }
+    });
+    if (added) {
+      meetings.sort((a, b) => new Date(b.date) - new Date(a.date));
+      saveMeetings();
+      renderMeetings();
+      toast(`Pulled ${added} meeting(s) from cloud`);
+    }
+  } catch (e) { console.error('Pull error:', e); }
+}
+
+async function deleteFromSupabase(id) {
+  if (!authSession?.access_token) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/meetings?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: sbHeaders(authSession.access_token)
+    });
+  } catch (e) { console.error('Delete sync error:', e); }
+}
+
+function manualSync() {
+  if (!authSession) {
+    toast('Sign in to enable sync');
+    return;
+  }
+  pullFromSupabase();
+  syncToSupabase();
+  toast('Syncing...');
+}
+
+// ── Helpers ──
+function formatDuration(s) {
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  if (m < 60) return `${m}m ${sec}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), 2500);
+}
+
+// ── Auto-sync every 30s ──
+setInterval(() => { if (authSession) syncToSupabase(); }, 30000);
+
+// ── Boot ──
+(async function boot() {
+  // Check for magic link callback in URL hash
+  const hashSession = parseHashSession();
+  if (hashSession) {
+    const user = await getUser(hashSession.access_token);
+    if (user) {
+      authSession = { ...hashSession, user };
+      localStorage.setItem('meetnote_session', JSON.stringify(authSession));
+      enterApp();
+      toast(`Welcome, ${user.email}`);
+      return;
+    }
+  }
+
+  // Check for saved session
+  const saved = localStorage.getItem('meetnote_session');
+  if (saved) {
+    authSession = JSON.parse(saved);
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      const user = await getUser(authSession.access_token);
+      if (user) { authSession.user = user; enterApp(); return; }
+    }
+    localStorage.removeItem('meetnote_session');
+  }
+
+  // Show auth screen
+  document.getElementById('authScreen').style.display = 'flex';
+})();
+</script>
+</body>
+</html>
