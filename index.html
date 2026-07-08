@@ -138,6 +138,15 @@ body {
 }
 .record-btn.recording { border-color: var(--red2); animation: pulse 1.5s infinite; }
 .record-btn.recording::after { border-radius: 6px; width: 28px; height: 28px; background: var(--red2); }
+.record-btn.paused { border-color: var(--orange); animation: none; }
+.record-btn.paused::after { border-radius: 50%; width: 36px; height: 36px; background: var(--orange); }
+.pause-btn {
+  display: none; margin: 12px auto 0; padding: 8px 24px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  cursor: pointer; font-size: 13px; font-weight: 600; transition: all .2s;
+}
+.pause-btn:hover { border-color: var(--accent); }
+.pause-btn.visible { display: inline-flex; align-items: center; gap: 6px; }
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); }
   50% { box-shadow: 0 0 0 16px rgba(239,68,68,0); }
@@ -436,6 +445,7 @@ body {
   <div id="tab-record">
     <div class="record-panel">
       <button class="record-btn" id="recordBtn" onclick="toggleRecording()"></button>
+      <button class="pause-btn" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
       <div class="record-status" id="recordStatus">Tap to start recording</div>
       <div class="record-timer" id="recordTimer">00:00</div>
       <div class="record-lang" id="recordLang">Language: English</div>
@@ -542,6 +552,8 @@ let interimText = '';
 let currentLang = settings.defaultLang || 'en-US';
 let currentMeetingId = null;
 let authSession = null;
+let isPaused = false;
+let pausedElapsed = 0;
 
 // ── Supabase Auth helpers ──
 function sbHeaders(accessToken) {
@@ -728,6 +740,32 @@ function toggleRecording() {
   else startRecording();
 }
 
+function togglePause() {
+  if (!isRecording) return;
+  if (isPaused) {
+    isPaused = false;
+    recordStart = Date.now() - pausedElapsed;
+    try { recognition.start(); } catch(e) {}
+    timerInterval = setInterval(updateTimer, 1000);
+    document.getElementById('recordBtn').classList.remove('paused');
+    document.getElementById('recordBtn').classList.add('recording');
+    document.getElementById('recordStatus').textContent = 'Recording...';
+    document.getElementById('pauseBtn').innerHTML = '⏸ Pause';
+  } else {
+    isPaused = true;
+    pausedElapsed = Date.now() - recordStart;
+    if (recognition) { recognition.onend = null; recognition.stop(); }
+    clearInterval(timerInterval);
+    document.getElementById('recordBtn').classList.remove('recording');
+    document.getElementById('recordBtn').classList.add('paused');
+    document.getElementById('recordStatus').textContent = 'Paused';
+    document.getElementById('pauseBtn').innerHTML = '▶ Resume';
+    recognition.onend = () => {
+      if (isRecording && !isPaused) { try { recognition.start(); } catch(e) {} }
+    };
+  }
+}
+
 function startRecording() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     toast('Speech recognition not supported. Use Chrome.');
@@ -771,18 +809,24 @@ function startRecording() {
 
   recognition.start();
   isRecording = true;
+  isPaused = false;
+  pausedElapsed = 0;
   recordStart = Date.now();
   document.getElementById('recordBtn').classList.add('recording');
   document.getElementById('recordStatus').textContent = 'Recording...';
+  document.getElementById('pauseBtn').classList.add('visible');
+  document.getElementById('pauseBtn').innerHTML = '⏸ Pause';
   timerInterval = setInterval(updateTimer, 1000);
 }
 
 function stopRecording() {
   if (recognition) { recognition.onend = null; recognition.stop(); }
   isRecording = false;
+  isPaused = false;
   clearInterval(timerInterval);
-  document.getElementById('recordBtn').classList.remove('recording');
+  document.getElementById('recordBtn').classList.remove('recording', 'paused');
   document.getElementById('recordStatus').textContent = 'Tap to start recording';
+  document.getElementById('pauseBtn').classList.remove('visible');
 
   if (!currentTranscript.trim()) {
     toast('No speech detected');
