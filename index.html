@@ -302,6 +302,58 @@ body {
 .empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
 .empty-state p { font-size: 14px; }
 
+/* Delete confirmation modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 28px; width: 100%; max-width: 400px; text-align: center;
+}
+.modal-card h3 { font-size: 18px; margin-bottom: 8px; color: var(--red2); }
+.modal-card p { font-size: 14px; color: var(--text2); margin-bottom: 16px; line-height: 1.5; }
+.modal-card input {
+  width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 15px; text-align: center;
+  outline: none; margin-bottom: 16px; letter-spacing: 2px; font-weight: 600;
+}
+.modal-card input:focus { border-color: var(--red); }
+.modal-card .modal-btns { display: flex; gap: 8px; }
+.modal-card .modal-btns button { flex: 1; }
+
+/* Project badge */
+.badge-project { background: rgba(245,158,11,.15); color: var(--orange); }
+
+/* Editable title */
+.detail-title-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.detail-title-row h2 { font-size: 22px; font-weight: 700; flex: 1; min-width: 0; }
+.edit-title-btn {
+  background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px;
+  cursor: pointer; color: var(--text2); transition: all .2s; flex-shrink: 0;
+}
+.edit-title-btn:hover { border-color: var(--accent); color: var(--text); }
+.title-edit-input {
+  flex: 1; padding: 6px 10px; background: var(--surface2); border: 1px solid var(--accent);
+  border-radius: 8px; color: var(--text); font-size: 20px; font-weight: 700;
+  outline: none; min-width: 0;
+}
+
+/* Project selector */
+.project-select {
+  width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 14px; margin-top: 8px; outline: none;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b90a5' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.project-select:focus { border-color: var(--accent); }
+.project-input-row { display: flex; gap: 8px; margin-top: 8px; }
+.project-input-row input { flex: 1; }
+.project-input-row button { white-space: nowrap; }
+
 /* Responsive */
 @media (max-width: 600px) {
   .app { padding: 12px; }
@@ -388,6 +440,13 @@ body {
       <div class="record-timer" id="recordTimer">00:00</div>
       <div class="record-lang" id="recordLang">Language: English</div>
       <input class="title-input" id="meetingTitle" placeholder="Meeting title (optional)" />
+      <select class="project-select" id="meetingProject">
+        <option value="">No project</option>
+      </select>
+      <div class="project-input-row">
+        <input class="title-input" id="newProjectName" placeholder="Add new project..." style="margin-top:0" />
+        <button class="btn btn-secondary btn-small" onclick="addProject()">Add</button>
+      </div>
       <div class="live-transcript" id="liveTranscript"></div>
     </div>
   </div>
@@ -407,7 +466,10 @@ body {
       Back
     </button>
     <div class="detail-header">
-      <h2 id="detailTitle"></h2>
+      <div class="detail-title-row" id="detailTitleRow">
+        <h2 id="detailTitle"></h2>
+        <button class="edit-title-btn" id="editTitleBtn" onclick="startEditTitle()" title="Edit title">✎</button>
+      </div>
       <div class="meeting-meta" id="detailMeta"></div>
       <div class="detail-actions" id="detailActions"></div>
     </div>
@@ -625,6 +687,7 @@ function initApp() {
   document.getElementById('defaultLang').value = currentLang;
   document.getElementById('autoSummarize').value = settings.autoSummarize || 'off';
   setLang(currentLang);
+  renderProjectDropdown();
   renderMeetings();
   if (authSession) {
     pullFromSupabase();
@@ -732,6 +795,8 @@ function stopRecording() {
   const title = document.getElementById('meetingTitle').value.trim() ||
     `Meeting ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
 
+  const project = document.getElementById('meetingProject').value || '';
+
   const meeting = {
     id: crypto.randomUUID(),
     title,
@@ -742,6 +807,7 @@ function stopRecording() {
     summary: null,
     actionItems: null,
     notes: '',
+    project,
     synced: false
   };
 
@@ -774,7 +840,8 @@ function renderMeetings() {
   const filtered = meetings.filter(m =>
     m.title.toLowerCase().includes(query) ||
     m.transcript.toLowerCase().includes(query) ||
-    (m.summary && m.summary.toLowerCase().includes(query))
+    (m.summary && m.summary.toLowerCase().includes(query)) ||
+    (m.project && m.project.toLowerCase().includes(query))
   );
   const list = document.getElementById('meetingsList');
 
@@ -792,6 +859,7 @@ function renderMeetings() {
     const d = new Date(m.date);
     const dur = formatDuration(m.duration);
     const badges = [
+      m.project ? `<span class="meeting-badge badge-project">${esc(m.project)}</span>` : '',
       m.summary ? '<span class="meeting-badge badge-summary">Summary</span>' : '',
       m.actionItems?.length ? `<span class="meeting-badge badge-actions">${m.actionItems.length} actions</span>` : ''
     ].join('');
@@ -820,10 +888,12 @@ function openMeeting(id) {
   detail.classList.add('visible');
 
   document.getElementById('detailTitle').textContent = m.title;
+  document.getElementById('editTitleBtn').style.display = '';
   document.getElementById('detailMeta').innerHTML = `
     <span>${new Date(m.date).toLocaleDateString()} ${new Date(m.date).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
     <span>${formatDuration(m.duration)}</span>
-    <span>${m.lang === 'es-ES' ? 'Spanish' : 'English'}</span>`;
+    <span>${m.lang === 'es-ES' ? 'Spanish' : 'English'}</span>
+    ${m.project ? `<span style="color:var(--orange)">📁 ${esc(m.project)}</span>` : ''}`;
 
   document.getElementById('detailActions').innerHTML = `
     <button class="btn btn-primary btn-small" onclick="summarizeMeeting('${m.id}')" ${m.summary ? 'disabled' : ''}>
@@ -1016,11 +1086,110 @@ function deleteMeeting(id) {
 }
 
 function clearAllData() {
-  if (!confirm('Delete ALL meetings? This cannot be undone.')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'deleteModal';
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <h3>⚠ Delete All Data</h3>
+      <p>This will permanently delete <strong>${meetings.length} meeting${meetings.length !== 1 ? 's' : ''}</strong>. This cannot be undone.<br><br>Type <strong>DELETE</strong> to confirm:</p>
+      <input id="deleteConfirmInput" placeholder="Type DELETE" autocomplete="off" />
+      <div class="modal-btns">
+        <button class="btn btn-secondary" onclick="document.getElementById('deleteModal').remove()">Cancel</button>
+        <button class="btn btn-danger" id="deleteConfirmBtn" disabled onclick="confirmClearAll()">Delete All</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const input = document.getElementById('deleteConfirmInput');
+  input.focus();
+  input.addEventListener('input', () => {
+    document.getElementById('deleteConfirmBtn').disabled = input.value !== 'DELETE';
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && input.value === 'DELETE') confirmClearAll();
+  });
+}
+
+function confirmClearAll() {
   meetings = [];
   saveMeetings();
   renderMeetings();
+  document.getElementById('deleteModal')?.remove();
   toast('All data cleared');
+}
+
+// ── Edit Title ──
+function startEditTitle() {
+  const m = meetings.find(x => x.id === currentMeetingId);
+  if (!m) return;
+  const row = document.getElementById('detailTitleRow');
+  row.innerHTML = `
+    <input class="title-edit-input" id="titleEditInput" value="${esc(m.title)}" />
+    <button class="btn btn-primary btn-small" onclick="saveTitle()">Save</button>
+    <button class="btn btn-secondary btn-small" onclick="cancelEditTitle()">Cancel</button>`;
+  document.getElementById('titleEditInput').focus();
+  document.getElementById('titleEditInput').select();
+  document.getElementById('titleEditInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveTitle();
+    if (e.key === 'Escape') cancelEditTitle();
+  });
+}
+
+function saveTitle() {
+  const m = meetings.find(x => x.id === currentMeetingId);
+  if (!m) return;
+  const newTitle = document.getElementById('titleEditInput').value.trim();
+  if (newTitle) {
+    m.title = newTitle;
+    m.synced = false;
+    saveMeetings();
+    if (authSession) syncToSupabase();
+    toast('Title updated');
+  }
+  restoreTitleRow(m);
+}
+
+function cancelEditTitle() {
+  const m = meetings.find(x => x.id === currentMeetingId);
+  restoreTitleRow(m);
+}
+
+function restoreTitleRow(m) {
+  const row = document.getElementById('detailTitleRow');
+  row.innerHTML = `
+    <h2 id="detailTitle">${esc(m?.title || '')}</h2>
+    <button class="edit-title-btn" id="editTitleBtn" onclick="startEditTitle()" title="Edit title">✎</button>`;
+}
+
+// ── Project Management ──
+const PROJECTS_KEY = 'meetnote_projects';
+let projects = JSON.parse(localStorage.getItem(PROJECTS_KEY) || '[]');
+
+function saveProjects() {
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+}
+
+function renderProjectDropdown() {
+  const sel = document.getElementById('meetingProject');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">No project</option>' +
+    projects.map(p => `<option value="${esc(p)}" ${p === current ? 'selected' : ''}>${esc(p)}</option>`).join('');
+}
+
+function addProject() {
+  const input = document.getElementById('newProjectName');
+  const name = input.value.trim();
+  if (!name) return;
+  if (!projects.includes(name)) {
+    projects.push(name);
+    projects.sort();
+    saveProjects();
+  }
+  renderProjectDropdown();
+  document.getElementById('meetingProject').value = name;
+  input.value = '';
+  toast(`Project "${name}" added`);
 }
 
 // ── Settings ──
@@ -1057,7 +1226,8 @@ async function syncToSupabase() {
       transcript: m.transcript,
       summary: m.summary,
       action_items: m.actionItems || null,
-      notes: m.notes
+      notes: m.notes,
+      project: m.project || null
     }));
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/meetings`, {
@@ -1099,7 +1269,8 @@ async function pullFromSupabase() {
           id: r.id, title: r.title, date: r.date, duration: r.duration,
           lang: r.lang, transcript: r.transcript, summary: r.summary,
           actionItems: r.action_items || null,
-          notes: r.notes || '', synced: true
+          notes: r.notes || '', project: r.project || '',
+          synced: true
         });
         added++;
       }
