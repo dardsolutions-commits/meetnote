@@ -363,6 +363,49 @@ body {
 .project-input-row input { flex: 1; }
 .project-input-row button { white-space: nowrap; }
 
+/* Upload block */
+.upload-panel {
+  background: var(--surface); border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 32px; text-align: center; margin-top: 16px; transition: all .2s; cursor: pointer;
+}
+.upload-panel:hover, .upload-panel.dragover {
+  border-color: var(--accent); background: rgba(99,102,241,.06);
+}
+.upload-panel svg { width: 48px; height: 48px; margin-bottom: 12px; color: var(--text2); }
+.upload-panel h3 { font-size: 16px; margin-bottom: 4px; }
+.upload-panel p { font-size: 13px; color: var(--text2); }
+.upload-panel input[type="file"] { display: none; }
+.upload-preview {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; margin-top: 16px; display: none;
+}
+.upload-preview.visible { display: block; }
+.upload-preview audio { width: 100%; margin: 12px 0; border-radius: 8px; }
+.upload-file-info {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  font-size: 13px; color: var(--text2);
+}
+.upload-file-info .file-icon {
+  width: 36px; height: 36px; background: rgba(99,102,241,.12); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+}
+.upload-file-info .file-name { font-weight: 600; color: var(--text); }
+.upload-file-info .file-size { font-size: 12px; }
+.upload-transcript-area {
+  width: 100%; min-height: 120px; padding: 12px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  font-size: 14px; line-height: 1.6; resize: vertical; outline: none; font-family: inherit;
+  margin-bottom: 12px;
+}
+.upload-transcript-area:focus { border-color: var(--accent); }
+.upload-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.or-divider {
+  display: flex; align-items: center; gap: 12px; margin: 20px 0 4px; color: var(--text2); font-size: 12px;
+}
+.or-divider::before, .or-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .app { padding: 12px; }
@@ -458,6 +501,44 @@ body {
         <button class="btn btn-secondary btn-small" onclick="addProject()">Add</button>
       </div>
       <div class="live-transcript" id="liveTranscript"></div>
+    </div>
+
+    <div class="or-divider">or upload audio</div>
+
+    <div class="upload-panel" id="uploadPanel" onclick="document.getElementById('audioFileInput').click()"
+         ondragover="event.preventDefault();this.classList.add('dragover')"
+         ondragleave="this.classList.remove('dragover')"
+         ondrop="event.preventDefault();this.classList.remove('dragover');handleAudioDrop(event)">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="6" y="10" width="36" height="28" rx="4"/>
+        <path d="M24 18v12m-4-4l4 4 4-4"/>
+        <path d="M16 10V8a4 4 0 014-4h8a4 4 0 014 4v2"/>
+      </svg>
+      <h3>Upload Voice Message</h3>
+      <p>Drop a WhatsApp or iPhone voice memo here, or tap to browse</p>
+      <p style="margin-top:6px;font-size:11px;color:var(--text2)">.m4a .ogg .opus .mp3 .wav .aac .caf .webm</p>
+      <input type="file" id="audioFileInput" accept="audio/*,.m4a,.ogg,.opus,.mp3,.wav,.aac,.caf,.webm" onchange="handleAudioFile(this.files[0])" />
+    </div>
+
+    <div class="upload-preview" id="uploadPreview">
+      <div class="upload-file-info">
+        <div class="file-icon">🎵</div>
+        <div>
+          <div class="file-name" id="uploadFileName">audio.m4a</div>
+          <div class="file-size" id="uploadFileSize">0 KB</div>
+        </div>
+        <button class="btn btn-secondary btn-small" style="margin-left:auto" onclick="clearUpload()">✕ Remove</button>
+      </div>
+      <audio controls id="audioPlayer"></audio>
+      <input class="title-input" id="uploadTitle" placeholder="Meeting title (optional)" style="margin-bottom:8px" />
+      <select class="project-select" id="uploadProject" style="margin-top:0;margin-bottom:8px">
+        <option value="">No project</option>
+      </select>
+      <textarea class="upload-transcript-area" id="uploadTranscript" placeholder="Type the transcript while listening... (play the audio above and type what you hear)"></textarea>
+      <div class="upload-actions">
+        <button class="btn btn-primary" onclick="saveUploadedMeeting()">Save Meeting</button>
+        <button class="btn btn-secondary" onclick="clearUpload()">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -1234,6 +1315,102 @@ function addProject() {
   document.getElementById('meetingProject').value = name;
   input.value = '';
   toast(`Project "${name}" added`);
+}
+
+// ── Audio Upload ──
+let uploadedAudioUrl = null;
+
+function handleAudioDrop(e) {
+  const file = e.dataTransfer?.files?.[0];
+  if (file && file.type.startsWith('audio/')) handleAudioFile(file);
+  else toast('Please drop an audio file');
+}
+
+function handleAudioFile(file) {
+  if (!file) return;
+  const validTypes = ['audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/ogg', 'audio/opus',
+    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/aac',
+    'audio/x-caf', 'audio/webm', 'audio/3gpp'];
+  if (!file.type.startsWith('audio/') && !validTypes.includes(file.type)) {
+    toast('Unsupported file type');
+    return;
+  }
+
+  if (uploadedAudioUrl) URL.revokeObjectURL(uploadedAudioUrl);
+  uploadedAudioUrl = URL.createObjectURL(file);
+
+  document.getElementById('audioPlayer').src = uploadedAudioUrl;
+  document.getElementById('uploadFileName').textContent = file.name;
+  document.getElementById('uploadFileSize').textContent = formatFileSize(file.size);
+  document.getElementById('uploadTitle').value = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+  document.getElementById('uploadTranscript').value = '';
+  document.getElementById('uploadPanel').style.display = 'none';
+  document.getElementById('uploadPreview').classList.add('visible');
+
+  renderUploadProjectDropdown();
+  document.getElementById('audioFileInput').value = '';
+}
+
+function clearUpload() {
+  if (uploadedAudioUrl) { URL.revokeObjectURL(uploadedAudioUrl); uploadedAudioUrl = null; }
+  document.getElementById('audioPlayer').src = '';
+  document.getElementById('uploadPreview').classList.remove('visible');
+  document.getElementById('uploadPanel').style.display = '';
+}
+
+function renderUploadProjectDropdown() {
+  const sel = document.getElementById('uploadProject');
+  sel.innerHTML = '<option value="">No project</option>' +
+    projects.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+}
+
+function saveUploadedMeeting() {
+  const transcript = document.getElementById('uploadTranscript').value.trim();
+  if (!transcript) {
+    toast('Type the transcript first — play the audio and type what you hear');
+    document.getElementById('uploadTranscript').focus();
+    return;
+  }
+
+  const title = document.getElementById('uploadTitle').value.trim() ||
+    `Voice memo ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+  const project = document.getElementById('uploadProject').value || '';
+
+  const audio = document.getElementById('audioPlayer');
+  const duration = Math.floor(audio.duration || 0);
+
+  const meeting = {
+    id: crypto.randomUUID(),
+    title,
+    date: new Date().toISOString(),
+    duration,
+    lang: currentLang,
+    transcript,
+    summary: null,
+    actionItems: null,
+    notes: '',
+    project,
+    source: 'upload',
+    synced: false
+  };
+
+  meetings.unshift(meeting);
+  saveMeetings();
+  clearUpload();
+  toast('Meeting saved from audio');
+
+  if (authSession) syncToSupabase();
+  if (settings.autoSummarize === 'on') {
+    switchTab('meetings');
+    openMeeting(meeting.id);
+    summarizeMeeting(meeting.id);
+  }
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
 // ── Settings ──
