@@ -1473,7 +1473,12 @@ async function transcribeAudio() {
 
   try {
     const buffer = await uploadedAudioFile.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    }
+    const base64 = btoa(binary);
 
     let mediaType = uploadedAudioFile.type || 'audio/mp4';
     if (mediaType === 'video/mp4' || mediaType === 'video/3gpp') mediaType = 'audio/mp4';
