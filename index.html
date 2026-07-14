@@ -534,6 +534,10 @@ body {
       <select class="project-select" id="uploadProject" style="margin-top:0;margin-bottom:8px">
         <option value="">No project</option>
       </select>
+      <div class="project-input-row" style="margin-bottom:8px">
+        <input class="title-input" id="newUploadProjectName" placeholder="Add new project..." style="margin-top:0" />
+        <button class="btn btn-secondary btn-small" onclick="addProjectFromUpload()">Add</button>
+      </div>
       <textarea class="upload-transcript-area" id="uploadTranscript" placeholder="Type the transcript while listening, or use AI to transcribe automatically"></textarea>
       <div class="upload-actions">
         <button class="btn btn-primary" id="transcribeBtn" onclick="transcribeAudio()">
@@ -554,6 +558,9 @@ body {
   <div id="tab-meetings" style="display:none">
     <div class="search-bar">
       <input class="search-input" id="searchInput" placeholder="Search meetings..." oninput="renderMeetings()" />
+      <select class="project-select" id="projectFilter" style="margin-top:0;max-width:200px;flex-shrink:0" onchange="renderMeetings()">
+        <option value="">All projects</option>
+      </select>
     </div>
     <div class="meetings-list" id="meetingsList"></div>
   </div>
@@ -789,6 +796,7 @@ function initApp() {
   document.getElementById('autoSummarize').value = settings.autoSummarize || 'off';
   setLang(currentLang);
   renderProjectDropdown();
+  renderProjectFilter();
   renderMeetings();
   if (authSession) {
     pullFromSupabase();
@@ -968,14 +976,26 @@ function saveMeetings() {
 }
 
 // ── Meetings list ──
+function renderProjectFilter() {
+  const sel = document.getElementById('projectFilter');
+  if (!sel) return;
+  const current = sel.value;
+  const usedProjects = [...new Set(meetings.map(m => m.project).filter(Boolean))].sort();
+  const allProjects = [...new Set([...projects, ...usedProjects])].sort();
+  sel.innerHTML = '<option value="">All projects</option>' +
+    allProjects.map(p => `<option value="${esc(p)}" ${p === current ? 'selected' : ''}>${esc(p)}</option>`).join('');
+}
+
 function renderMeetings() {
   const query = (document.getElementById('searchInput')?.value || '').toLowerCase();
-  const filtered = meetings.filter(m =>
-    m.title.toLowerCase().includes(query) ||
-    m.transcript.toLowerCase().includes(query) ||
-    (m.summary && m.summary.toLowerCase().includes(query)) ||
-    (m.project && m.project.toLowerCase().includes(query))
-  );
+  const projectFilter = document.getElementById('projectFilter')?.value || '';
+  const filtered = meetings.filter(m => {
+    if (projectFilter && m.project !== projectFilter) return false;
+    return m.title.toLowerCase().includes(query) ||
+      m.transcript.toLowerCase().includes(query) ||
+      (m.summary && m.summary.toLowerCase().includes(query)) ||
+      (m.project && m.project.toLowerCase().includes(query));
+  });
   const list = document.getElementById('meetingsList');
 
   if (!filtered.length) {
@@ -1320,7 +1340,26 @@ function addProject() {
     saveProjects();
   }
   renderProjectDropdown();
+  renderUploadProjectDropdown();
+  renderProjectFilter();
   document.getElementById('meetingProject').value = name;
+  input.value = '';
+  toast(`Project "${name}" added`);
+}
+
+function addProjectFromUpload() {
+  const input = document.getElementById('newUploadProjectName');
+  const name = input.value.trim();
+  if (!name) return;
+  if (!projects.includes(name)) {
+    projects.push(name);
+    projects.sort();
+    saveProjects();
+  }
+  renderProjectDropdown();
+  renderUploadProjectDropdown();
+  renderProjectFilter();
+  document.getElementById('uploadProject').value = name;
   input.value = '';
   toast(`Project "${name}" added`);
 }
