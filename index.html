@@ -516,8 +516,8 @@ body {
       </svg>
       <h3>Upload Voice Message</h3>
       <p>Drop a WhatsApp or iPhone voice memo here, or tap to browse</p>
-      <p style="margin-top:6px;font-size:11px;color:var(--text2)">.m4a .ogg .opus .mp3 .wav .aac .caf .webm</p>
-      <input type="file" id="audioFileInput" accept="audio/*,.m4a,.ogg,.opus,.mp3,.wav,.aac,.caf,.webm" onchange="handleAudioFile(this.files[0])" />
+      <p style="margin-top:6px;font-size:11px;color:var(--text2)">.mp4 .m4a .ogg .opus .mp3 .wav .aac .webm</p>
+      <input type="file" id="audioFileInput" accept="audio/*,video/mp4,.mp4,.m4a,.ogg,.opus,.mp3,.wav,.aac,.webm" onchange="handleAudioFile(this.files[0])" />
     </div>
 
     <div class="upload-preview" id="uploadPreview">
@@ -1330,7 +1330,7 @@ function handleAudioFile(file) {
   if (!file) return;
   const validTypes = ['audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/ogg', 'audio/opus',
     'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/aac',
-    'audio/x-caf', 'audio/webm', 'audio/3gpp'];
+    'audio/x-caf', 'audio/webm', 'audio/3gpp', 'video/mp4', 'video/3gpp'];
   if (!file.type.startsWith('audio/') && !validTypes.includes(file.type)) {
     toast('Unsupported file type');
     return;
