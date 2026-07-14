@@ -1460,11 +1460,8 @@ function saveUploadedMeeting() {
 async function transcribeAudio() {
   if (!uploadedAudioFile) { toast('No audio file loaded'); return; }
 
-  const apiUrl = settings.apiUrl || document.getElementById('apiUrl')?.value || 'https://wkdmsrxrtxwgifiloftg.supabase.co/functions/v1/summarize';
-  if (!apiUrl) { toast('Set API proxy URL in Settings first'); switchTab('settings'); return; }
-
-  const maxSize = 20 * 1024 * 1024;
-  if (uploadedAudioFile.size > maxSize) { toast('File too large (max 20MB)'); return; }
+  const maxSize = 25 * 1024 * 1024;
+  if (uploadedAudioFile.size > maxSize) { toast('File too large (max 25MB)'); return; }
 
   const btn = document.getElementById('transcribeBtn');
   const loader = document.getElementById('transcribeLoader');
@@ -1482,44 +1479,26 @@ async function transcribeAudio() {
 
     let mediaType = uploadedAudioFile.type || 'audio/mp4';
     if (mediaType === 'video/mp4' || mediaType === 'video/3gpp') mediaType = 'audio/mp4';
-    if (!mediaType.startsWith('audio/')) mediaType = 'audio/mp4';
 
-    const langHint = currentLang === 'es-ES'
-      ? 'The audio is in Spanish. Transcribe in Spanish.'
-      : 'The audio is in English. Transcribe in English.';
-
-    const res = await fetch(apiUrl, {
+    const res = await fetch('https://wkdmsrxrtxwgifiloftg.supabase.co/functions/v1/transcribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'audio',
-              source: { type: 'base64', media_type: mediaType, data: base64 }
-            },
-            {
-              type: 'text',
-              text: `Transcribe this audio recording word for word. ${langHint} Output ONLY the transcript text, nothing else — no labels, no timestamps, no commentary. If multiple speakers are present, start each speaker's turn on a new line.`
-            }
-          ]
-        }]
+        audio_base64: base64,
+        media_type: mediaType,
+        language: currentLang
       })
     });
 
     const data = await res.json();
 
     if (data.error) {
-      toast('Transcription failed: ' + (data.error.message || data.error));
+      toast('Transcription failed: ' + (data.error.detail || data.error));
       return;
     }
 
-    const transcript = data.content?.[0]?.text || '';
-    if (transcript) {
-      document.getElementById('uploadTranscript').value = transcript;
+    if (data.transcript) {
+      document.getElementById('uploadTranscript').value = data.transcript;
       toast('Transcription complete');
     } else {
       toast('No speech detected in audio');
