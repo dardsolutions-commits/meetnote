@@ -534,10 +534,18 @@ body {
       <select class="project-select" id="uploadProject" style="margin-top:0;margin-bottom:8px">
         <option value="">No project</option>
       </select>
-      <textarea class="upload-transcript-area" id="uploadTranscript" placeholder="Type the transcript while listening... (play the audio above and type what you hear)"></textarea>
+      <textarea class="upload-transcript-area" id="uploadTranscript" placeholder="Type the transcript while listening, or use AI to transcribe automatically"></textarea>
       <div class="upload-actions">
+        <button class="btn btn-primary" id="transcribeBtn" onclick="transcribeAudio()">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8l2 4-6 8-6-8z"/></svg>
+          Transcribe with AI
+        </button>
         <button class="btn btn-primary" onclick="saveUploadedMeeting()">Save Meeting</button>
         <button class="btn btn-secondary" onclick="clearUpload()">Cancel</button>
+      </div>
+      <div class="ai-loading" id="transcribeLoader" style="display:none">
+        <div class="ai-spinner"></div>
+        <span>Transcribing audio with AI... this may take a moment</span>
       </div>
     </div>
   </div>
@@ -1319,6 +1327,7 @@ function addProject() {
 
 // ── Audio Upload ──
 let uploadedAudioUrl = null;
+let uploadedAudioFile = null;
 
 function handleAudioDrop(e) {
   const file = e.dataTransfer?.files?.[0];
@@ -1338,6 +1347,7 @@ function handleAudioFile(file) {
 
   if (uploadedAudioUrl) URL.revokeObjectURL(uploadedAudioUrl);
   uploadedAudioUrl = URL.createObjectURL(file);
+  uploadedAudioFile = file;
 
   document.getElementById('audioPlayer').src = uploadedAudioUrl;
   document.getElementById('uploadFileName').textContent = file.name;
@@ -1353,6 +1363,7 @@ function handleAudioFile(file) {
 
 function clearUpload() {
   if (uploadedAudioUrl) { URL.revokeObjectURL(uploadedAudioUrl); uploadedAudioUrl = null; }
+  uploadedAudioFile = null;
   document.getElementById('audioPlayer').src = '';
   document.getElementById('uploadPreview').classList.remove('visible');
   document.getElementById('uploadPanel').style.display = '';
@@ -1404,6 +1415,76 @@ function saveUploadedMeeting() {
     switchTab('meetings');
     openMeeting(meeting.id);
     summarizeMeeting(meeting.id);
+  }
+}
+
+async function transcribeAudio() {
+  if (!uploadedAudioFile) { toast('No audio file loaded'); return; }
+
+  const apiUrl = settings.apiUrl || document.getElementById('apiUrl')?.value || 'https://wkdmsrxrtxwgifiloftg.supabase.co/functions/v1/summarize';
+  if (!apiUrl) { toast('Set API proxy URL in Settings first'); switchTab('settings'); return; }
+
+  const maxSize = 20 * 1024 * 1024;
+  if (uploadedAudioFile.size > maxSize) { toast('File too large (max 20MB)'); return; }
+
+  const btn = document.getElementById('transcribeBtn');
+  const loader = document.getElementById('transcribeLoader');
+  btn.disabled = true;
+  loader.style.display = 'flex';
+
+  try {
+    const buffer = await uploadedAudioFile.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+
+    let mediaType = uploadedAudioFile.type || 'audio/mp4';
+    if (mediaType === 'video/mp4' || mediaType === 'video/3gpp') mediaType = 'audio/mp4';
+    if (!mediaType.startsWith('audio/')) mediaType = 'audio/mp4';
+
+    const langHint = currentLang === 'es-ES'
+      ? 'The audio is in Spanish. Transcribe in Spanish.'
+      : 'The audio is in English. Transcribe in English.';
+
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'audio',
+              source: { type: 'base64', media_type: mediaType, data: base64 }
+            },
+            {
+              type: 'text',
+              text: `Transcribe this audio recording word for word. ${langHint} Output ONLY the transcript text, nothing else — no labels, no timestamps, no commentary. If multiple speakers are present, start each speaker's turn on a new line.`
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      toast('Transcription failed: ' + (data.error.message || data.error));
+      return;
+    }
+
+    const transcript = data.content?.[0]?.text || '';
+    if (transcript) {
+      document.getElementById('uploadTranscript').value = transcript;
+      toast('Transcription complete');
+    } else {
+      toast('No speech detected in audio');
+    }
+  } catch (err) {
+    toast('Transcription error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    loader.style.display = 'none';
   }
 }
 
