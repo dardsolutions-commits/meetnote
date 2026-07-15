@@ -1057,6 +1057,8 @@ function openMeeting(id) {
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12h8M8 2v8m-3-3l3 3 3-3"/></svg>
       Export
     </button>
+    ${m.audioData ? `<button class="btn btn-secondary btn-small" onclick="retranscribeMeeting('${m.id}')">Retranscribe</button>
+    <button class="btn btn-secondary btn-small" onclick="clearAudio('${m.id}')">Clear Audio</button>` : ''}
     <button class="btn btn-danger btn-small" onclick="deleteMeeting('${m.id}')">Delete</button>`;
 
   let html = '';
@@ -1414,7 +1416,7 @@ function renderUploadProjectDropdown() {
     projects.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
 }
 
-function saveUploadedMeeting() {
+async function saveUploadedMeeting() {
   const transcript = document.getElementById('uploadTranscript').value.trim();
   if (!transcript) {
     toast('Type the transcript first — play the audio and type what you hear');
@@ -1429,6 +1431,22 @@ function saveUploadedMeeting() {
   const audio = document.getElementById('audioPlayer');
   const duration = Math.floor(audio.duration || 0);
 
+  let audioData = null;
+  let audioType = null;
+  if (uploadedAudioFile) {
+    try {
+      const buf = await uploadedAudioFile.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 8192) {
+        bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+      }
+      audioData = btoa(bin);
+      audioType = uploadedAudioFile.type || 'audio/mp4';
+      if (audioType === 'video/mp4' || audioType === 'video/3gpp') audioType = 'audio/mp4';
+    } catch(e) {}
+  }
+
   const meeting = {
     id: crypto.randomUUID(),
     title,
@@ -1441,7 +1459,9 @@ function saveUploadedMeeting() {
     notes: '',
     project,
     source: 'upload',
-    synced: false
+    synced: false,
+    audioData,
+    audioType
   };
 
   meetings.unshift(meeting);
@@ -1509,6 +1529,48 @@ async function transcribeAudio() {
     btn.disabled = false;
     loader.style.display = 'none';
   }
+}
+
+async function retranscribeMeeting(id) {
+  const m = meetings.find(x => x.id === id);
+  if (!m || !m.audioData) { toast('No audio stored for this meeting'); return; }
+
+  toast('Retranscribing...');
+  try {
+    const res = await fetch('https://wkdmsrxrtxwgifiloftg.supabase.co/functions/v1/transcribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audio_base64: m.audioData,
+        media_type: m.audioType || 'audio/mp4',
+        language: m.lang || currentLang
+      })
+    });
+    const data = await res.json();
+    if (data.error) { toast('Retranscription failed: ' + (data.error.detail || data.error)); return; }
+    if (data.transcript) {
+      m.transcript = data.transcript;
+      m.summary = null;
+      m.actionItems = null;
+      saveMeetings();
+      openMeeting(id);
+      toast('Retranscription complete');
+    } else {
+      toast('No speech detected');
+    }
+  } catch (err) {
+    toast('Retranscription error: ' + err.message);
+  }
+}
+
+function clearAudio(id) {
+  const m = meetings.find(x => x.id === id);
+  if (!m) return;
+  delete m.audioData;
+  delete m.audioType;
+  saveMeetings();
+  openMeeting(id);
+  toast('Audio data cleared — transcript kept');
 }
 
 function formatFileSize(bytes) {
